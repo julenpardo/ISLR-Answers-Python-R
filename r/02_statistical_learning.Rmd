@@ -1,0 +1,207 @@
+---
+title: "02_statistical_learning"
+author: "Julen Pardo"
+date: "4/11/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Applied exercises
+
+## 8
+
+### 8.a
+
+```{r}
+college = read.csv("../datasets/College.csv")
+```
+
+### 8.b
+
+```{r}
+rownames(college) = college[,1]
+college = college[,-1]
+college
+
+```
+
+### 8.c (i)
+
+```{r}
+summary(college)
+```
+### 8.c (ii)
+```{r}
+pairs(college[,2:10])
+```
+
+### 8.c (iii)
+```{r}
+boxplot(Outstate~Private, data=college)
+```
+
+### 8.c (iv)
+```{r}
+Elite = rep("No", nrow(college))
+Elite[college$Top10perc > 50] = "Yes"
+Elite = as.factor(Elite)
+college = data.frame(college, Elite)
+
+summary(college)
+
+boxplot(Outstate~Elite, data=college)
+```
+
+### 8.c (v)
+
+```{r}
+par(mfrow=c(2, 2))
+hist(college$Apps, breaks=20, xlim=c(0, 20000), ylim=c(0, 500))
+hist(college$Enroll, xlim=c(0, 4000))
+hist(college$PhD, breaks=20)
+hist(college$Top10perc)
+```
+
+## 9
+
+```{r}
+auto = read.csv("../datasets/Auto.csv")
+auto
+```
+### 9.a
+
+*Quantitative*
+
+* mpg
+* displacement
+* horsepower
+* weight
+* acceleration
+* year
+
+*Qualitative*
+
+* year
+* origin
+
+### 9.b
+
+```{r}
+sapply(auto[,1:7], range)
+```
+
+### 9.c
+
+```{r}
+sapply(auto[,1:7], mean)
+sapply(auto[,1:7], sd)
+```
+
+### 9.d
+
+```{r}
+auto_subset = auto[-c(10:84),]
+
+sapply(auto_subset[,1:7], range)
+sapply(auto_subset[,1:7], mean)
+sapply(auto_subset[,1:7], sd)
+```
+
+### 9.e
+
+```{r}
+pairs(auto[,1:7])
+```
+
+*Positive linear correlations*
+
+* Weight and displacement
+* Weight and horsepower
+
+*Negative, non linear, monotonic correlations*
+
+* mpg and displacement
+* mpg and horsepower
+* mpg and weight
+
+### 9.f
+
+* The greater the displacement, horsepower or weight is, the lower the mpg
+
+
+## 10
+
+### 10.a
+
+```{r}
+library(MASS)
+dim(Boston)
+```
+
+### 10.b
+
+```{r}
+pairs(~crim + age + dis + medv + rm + nox, data=Boston)
+```
+
+### 10.c
+
+```{r}
+cor(Boston[-1], Boston$crim)
+```
+
+### 10.d
+
+```{r}
+par(mfrow=c(1, 2))
+boxplot(Boston$crim)
+hist(Boston$crim, xlim=c(0, 40), breaks=40)
+summary(Boston$crim)
+sd(Boston$crim)
+third_quartile = quantile(Boston$crim, 0.75)
+iqr = IQR(Boston$crim)
+Boston[Boston$crim > third_quartile + 1.5 * iqr,]
+```
+
+The crime distribution is far from normal and there are several outliers that
+skew the mean (mean 3,61 vs 0.25 median, being the standard deviation 8.6).
+There are 66 suburbs with a crime rate greater than the upper whisker in the
+box plot. The range is quite wide but the majority of the occurrences belong
+to one edge.
+
+### 10.e
+
+```{r}
+nrow(Boston[Boston$chas == 1,])
+```
+### 10.f
+
+```{r}
+median(Boston$ptratio)
+```
+
+### 10.g
+
+```{r}
+row.names(Boston[Boston$medv == min(Boston$medv),])
+```
+
+### 10.h
+
+```{r}
+nrow(Boston[Boston$rm > 7,])
+```
+
+```{r}
+nrow(Boston[Boston$rm > 8,])
+```
+
+```{r}
+as.data.frame(apply(Boston, 2, summary))
+as.data.frame(apply(Boston[Boston$rm > 8,], 2, summary))
+```
+
+Lower crime and lstat, much higher medv
