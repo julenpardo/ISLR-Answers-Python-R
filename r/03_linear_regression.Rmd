@@ -1,0 +1,568 @@
+---
+title: "03_linear_regression"
+author: "Julen Pardo"
+date: "4/16/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Applied exercises
+
+## 8.a
+
+```{r}
+auto = read.csv("../datasets/Auto.csv")
+lm.fit = lm(mpg~horsepower, data=auto)
+summary(lm.fit)
+```
+
+* i. Yes, as the p-value for the `horsepower` predictor shows that it's
+statistically significant (`2.2e-16`).
+* ii. R-squared coefficient is 0.6, meaning that the 60% of the variability
+of `mpg` is explained by `horsepower`.
+* iii. It's negative; the coefficient of `horsepower` is `-0.16`, i.e., every
+unit increase in `horsepower` supposes a decrease of `0.16` units in `mpg`.
+* iv
+
+```{r}
+?predict
+predict(lm.fit, data.frame(horsepower=98), interval="confidence")
+predict(lm.fit, data.frame(horsepower=98), interval="prediction")
+```
+
+## 8.b
+
+```{r}
+plot(auto$horsepower, auto$mpg)
+abline(lm.fit, col="red")
+```
+
+## 8.c
+
+```{r}
+par(mfrow=c(2,2))
+plot(lm.fit)
+```
+
+Residuals vs fitted values plot shows a clear non-linear relationship.
+
+## 9.a
+
+```{r}
+pairs(auto[,1:8])
+```
+
+## 9.b
+
+```{r}
+cor(auto[,1:8])
+```
+
+## 9.c
+
+```{r}
+lm.fit = lm(mpg~.-name, data=auto)
+summary(lm.fit)
+```
+
+* i. F-statistic is far larger than 1 (`252`) and p-value is is virtually zero,
+meaning that there's at least one predictor associated with `mpg`.
+* ii. There's a strong relationship with `origin`, `year`, and `weight`. There's
+also relationship with `displacement`, although less significant statistically
+than the previous predictors. `cylinders`, `horsepower` and `acceleration` are
+not statistically significant.
+* iii. The `0.75` coefficient for `year` suggests that every year the `mpg`
+increments by 0.75 units (provided that rest of predictors are constant).
+
+## 9.d
+
+```{r}
+par(mfrow=c(2,2))
+plot(lm.fit)
+```
+
+* The residuals curved line shows evidence of non-linearity meaning that a
+higher order polynomial model would result into a better fit
+* Observation 14 has high leverage
+
+## 9.e
+
+```{r}
+cor(auto[1:8])
+lm.fit = lm(mpg~. - name + horsepower:weight + horsepower:acceleration + year:cylinders + weight:acceleration, data=auto)
+summary(lm.fit)
+```
+
+`horsepower:weight` and `cylinders:year` are statistically significant. So is
+`horsepower:acceleration`, to a lesser extent. `weight:acceleration` is not
+significant.
+
+## 9.f
+
+```{r}
+lm.fit = lm(mpg ~ . -name + I(cylinders^2) + I(horsepower^2) + log(year), data=auto)
+summary(lm.fit)
+```
+`horsepower^2` and `log(year)` seem to be strongly significant. So does
+`cylinder^2` to a lesser extent.
+
+## 10.a
+
+```{r}
+carseats = read.csv("../datasets/Carseats.csv")
+carseats
+lm.fit = lm(Sales ~ Price + Urban + US, data=carseats)
+```
+
+## 10.b
+
+```{r}
+summary(lm.fit)
+```
+
+* The negative coefficient in `Price` indicates that the `Sales` decrease as the
+price increases (for every unit increase in `Price`, `Sales` decreases by 0.05
+units)
+* Negative coefficient of `UrbanYes` indicates that the sales would be lower for
+`Urban=Yes` carseats compared to `Urban=No` (although the high p-value shows
+that this predictor is statistically insignificant).
+* Positive coefficient for `USYes` indicates that more carseats are sold in the
+US than in other regions.
+
+## 10.c
+
+```
+Y = 13.04347 - 0.0544 * Price - 0.0219 * Urban + 1.2 * US
+Urban = 1 if store located in urban location, else 0
+US = 1 if store located in the US, else 0
+```
+
+## 10.d
+
+Null hypothesis can be rejected for `Price` and `USYes`, as their close-to-zero
+p-values indicate a strong statistical significance. It cannot be rejected for
+`UrbanYes` due to its high p-value.
+
+## 10.e
+
+```{r}
+lm.fit2 = lm(Sales ~ Price + US, data=carseats)
+summary(lm.fit2)
+```
+
+Using just `Price` and `US` as predictors, F-stat increases from 41 to 62 and
+RSE decreases from 2.472 to 2.469, resulting into a model that fits the data
+slightly better.
+
+## 10.f
+
+Model (e) fits the data slightly better as the RSE decreases from `2.472` of the
+model (a) to `2.469`. The increase in the F-statistic from `41` to `62` also
+shows stronger statistical significance in the predictors used for model (e).
+
+## 10.g
+
+```{r}
+confint(lm.fit2)
+```
+
+## 10.h
+
+```{r}
+par(mfrow=c(4,2))
+plot(predict(lm.fit2), residuals(lm.fit2))
+plot(predict(lm.fit2), rstudent(lm.fit2))
+plot(lm.fit2)
+```
+
+* Studentized residuals suggests that there are no outliers as all values are in
+the [-3, 3] range
+* Residuals vs Leverage plot indicates existence of observations that exceed the
+leverage statistic
+
+## 11
+
+```{r}
+set.seed(1)
+x = rnorm(100)
+y = 2*x + rnorm(100)
+```
+
+## 11.a
+
+```{r}
+plot(x, y)
+lm.fit = lm(y~x+0)
+summary(lm.fit)
+```
+
+* Coefficient: `1.9939`
+* Std.error: 0.1065
+* t-stat: `18.73`
+* p-value: `<2e-16`
+
+Virtually 0 p-value is a indicator of strong statistical significance for `x` as
+predictor of `y` so null hypothesis can be rejected.
+
+## 11.b
+
+```{r}
+lm.fit2 = lm(x~y+0)
+summary(lm.fit2)
+```
+
+* Coefficient: `0.39111`
+* Std.error: 0.02809
+* t-stat: `18.73`
+* p-value: `<2e-16`
+
+Same conclusions from 11.a
+
+## 11.c
+
+Because the relationship between `x` and `y` is clearly linear, we can show it
+as `y` being dependant on `y` or vice-versa by swapping the axes.
+If `y = 2x`, it can also be expressed as `x = y / 2; x = 0.5 * y` (`1.9939` was
+rounded to 2).
+
+## 11.d
+
+
+```{r}
+numerator = sqrt(length(x) - 1) * sum(x * y)
+denominator_squared = sum(x * x) * sum(y * y) - I((sum(x * y))^2)
+
+all.equal(c(numerator / sqrt(denominator_squared)), c(summary(lm.fit)$coefficients[3]))
+```
+Algebraic demonstration made in paper
+
+## 11.e
+
+It can be obviously seen in the equation that swaping `x` and `y` doesn't change
+the result.
+
+## 11.f
+
+```{r}
+t.value.1 = summary(lm(x~y))$coefficients[2, 3]
+t.value.2 = summary(lm(y~x))$coefficients[2, 3]
+
+all.equal(c(t.value.1), c(t.value.2))
+```
+
+## 12.a
+
+Simple algebra shows that the coefficient estimate will be the same when the sum
+of squares of both `x` and `y` observations are equal.
+
+## 12.b
+
+```{r}
+set.seed(42)
+x = rnorm(100)
+y = rnorm(100) * 50
+
+beta.1 = summary(lm(y~x + 0))$coefficients[1,1]
+beta.2 = summary(lm(x~y + 0))$coefficients[1,1]
+
+beta.1 != beta.2
+```
+
+## 12.c
+
+```{r}
+set.seed(42)
+x = rnorm(100)
+y = sample(x)
+
+beta.1 = summary(lm(y~x + 0))$coefficients[1,1]
+beta.2 = summary(lm(x~y + 0))$coefficients[1,1]
+
+all.equal(c(beta.1), c(beta.2))
+```
+
+## 13.a_c
+
+```{r}
+set.seed(1)
+x = rnorm(100)
+eps = rnorm(100, sd=sqrt(0.25))
+y = -1 + 0.5 * x + eps
+```
+
+* Length of vector `y` is the same as `x` and `eps`, `100`
+* `β0` is `-1` and `β1` is `0.5`
+
+## 13.d
+
+```{r}
+plot(x, y)
+```
+
+* There's a linear relationship between `x` and `y` with the expected noise
+caused by `eps`.
+
+## 13.e
+
+```{r}
+lm.fit = lm(y~x)
+summary(lm.fit)
+```
+
+* The coefficients of the fitted model are the same as the ones used previously
+
+## 13.f
+
+```{r}
+plot(x, y)
+abline(lm.fit, col=2)
+abline(-1, 0.5, col=3)
+legend(-1, legend=c("population", "model fit"), col=2:3, lwd=3)
+```
+
+## 13.g
+
+```{r}
+lm.fit2 = lm(y~x + I(x^2) )
+summary(lm.fit)
+summary(lm.fit2)
+```
+
+* RSE has slightly decreased because the quadratic term makes the model overfit
+as it also capture the noise, generalizing worse. The p-value for the quadratic
+term also shows that it's not statistically significant.
+
+## 13.h
+
+```{r}
+x = rnorm(100)
+eps = rnorm(100, sd=sqrt(0.125))
+y = -1 + 0.5 * x + eps
+lm.fit2 = lm(y~x)
+summary(lm.fit2)
+plot(x, y)
+abline(lm2.fit, col=2)
+abline(-1, 0.5, col=3)
+legend(-1, legend=c("population", "model fit"), col=2:3, lwd=3)
+```
+
+As expected, RSE decreases and R-squared and F-statistic increase.
+
+## 13.i
+
+```{r}
+x = rnorm(100)
+eps = rnorm(100, sd=sqrt(0.5))
+y = -1 + 0.5 * x + eps
+lm.fit3 = lm(y~x)
+summary(lm.fit3)
+plot(x, y)
+abline(lm.fit3, col=2)
+abline(-1, 0.5, col=3)
+legend(-1, legend=c("population", "model fit"), col=2:3, lwd=3)
+```
+As expected, RSE increases and R-squared and F-statistic decrease.
+
+## 13.j
+
+```{r}
+confint(lm.fit)
+confint(lm.fit2)
+confint(lm.fit3)
+```
+
+As expected, the noisier the dataset is, the higher the range (wider) of the
+confidence interval is.
+
+## 14.a
+
+```{r}
+set.seed(1)
+x1 = runif(100)
+x2 = 0.5*x1 + rnorm(100) / 10
+y = 2 + 2*x1 + 0.3*x2 + rnorm(100)
+```
+
+* β0: `2`
+* β1: `2`
+* β2: `0.3`
+
+## 14.b
+
+```{r}
+cor(x1, x2)
+plot(x1, x2)
+```
+
+## 14.c
+
+```{r}
+lm.fit = lm(y~x1+x2)
+summary(lm.fit)
+```
+
+* β0: `2.13`
+* β1: `1.44`
+* β2: `1`
+* The intercept estimate matches with the true value. Coefficient for β1
+(`1.44` vs true `2`) is relatively close to true value, but coefficient for β2
+can be considered quite away from the true value (`1` vs true `0.3`).
+Coefficients for both predictors have a relatively high standard error,
+specially for β2
+* Null hypothesis may not be rejected for β1 as it's showing a statistically
+significance, although near the 5%; while it can be accepted for β2 as its
+p value is considerably high.
+
+## 14.d
+
+```{r}
+lm.fit2 = lm(y~x1)
+summary(lm.fit2)
+```
+
+* β1 coefficient is much closer now from true value `2` (`1.44` from model
+above vs current `1.98`), being this predictor statistically way more
+significant as its p-value is virtually 0, thus rejecting the null hypothesis.
+
+## 14.e
+
+```{r}
+lm.fit3 = lm(y~x2)
+summary(lm.fit3)
+```
+
+* Same conclusions as above
+
+## 14.f
+
+* They don't contradict each other, it's showing that the two predictors are
+highly collinear, that is, they tend to increase and decrease together, making
+it difficult to determine how does each one individually associated to the
+predicted value
+
+## 14.g
+
+```{r}
+x1 = c(x1, 0.1)
+x2 = c(x2, 0.8)
+y = c(y, 6)
+cor(x1, x2)
+plot(x1, x2)
+
+lm.fit = lm(y~x1+x2)
+summary(lm.fit)
+
+lm.fit2 = lm(y~x1)
+summary(lm.fit2)
+
+lm.fit3 = lm(y~x2)
+summary(lm.fit3)
+
+sd(x1)
+sd(x2)
+
+par(mfrow=c(2,2))
+plot(lm.fit)
+par(mfrow=c(2,2))
+plot(lm.fit2)
+par(mfrow=c(2,2))
+plot(lm.fit3)
+
+par(mfrow=c(3,1))
+plot(predict(lm.fit), rstudent(lm.fit))
+plot(predict(lm.fit2), rstudent(lm.fit2))
+plot(predict(lm.fit3), rstudent(lm.fit3))
+```
+
+* Now the model using the single `x1` predictor results in a worse model than
+with `x2` (higher RSE and lest statistical significance of the predictor) as the
+new added observations for the first dataset results into a more dispersed
+dataset (higher standard deviation)
+* The new observation supposes an outlier for the first and third model, but not
+for the second one.
+
+## 15.a
+
+```{r}
+library(MASS)
+summary(Boston)
+models <- list()
+
+for (predictor in colnames(data.frame(Boston))) {
+  if (predictor == "crim") {
+    next
+  }
+  models[[predictor]] <- lm(Boston[["crim"]]~Boston[[predictor]])
+}
+for (predictor in ls(models)) {
+  print(predictor)
+  print(summary(models[[predictor]]))
+}
+```
+
+There's statistical significance for every predictor except for `chas`.
+
+## 15.b
+
+```{r}
+lm.all = lm(crim~., data=Boston)
+summary(lm.all)
+```
+
+Null hypothesis can be rejected for `zn`, `dis`, `rad`, `black` and `medv`.
+
+## 15.c
+
+```{r}
+plot(
+  c(
+    coefficients(models[["zn"]][])[2],
+    coefficients(models[["indus"]])[2],
+    coefficients(models[["chas"]])[2],
+    coefficients(models[["nox"]])[2],
+    coefficients(models[["rm"]])[2],
+    coefficients(models[["age"]])[2],
+    coefficients(models[["dis"]])[2],
+    coefficients(models[["rad"]])[2],
+    coefficients(models[["tax"]])[2],
+    coefficients(models[["ptratio"]])[2],
+    coefficients(models[["black"]])[2],
+    coefficients(models[["lstat"]])[2],
+    coefficients(models[["medv"]])[2]
+  ),
+  coefficients(lm.all)[2:14]
+)
+```
+
+```{r}
+lm.zn = lm(crim~poly(zn, 3), data=Boston)
+lm.indus = lm(crim~poly(indus, 3), data=Boston)
+lm.nox = lm(crim~poly(nox, 3), data=Boston)
+lm.rm = lm(crim~poly(rm, 3), data=Boston)
+lm.age = lm(crim~poly(age, 3), data=Boston)
+lm.dis = lm(crim~poly(dis, 3), data=Boston)
+lm.rad = lm(crim~poly(rad, 3), data=Boston)
+lm.tax = lm(crim~poly(tax, 3), data=Boston)
+lm.ptratio = lm(crim~poly(ptratio, 3), data=Boston)
+lm.black = lm(crim~poly(black, 3), data=Boston)
+lm.lstat = lm(crim~poly(lstat, 3), data=Boston)
+lm.medv = lm(crim~poly(medv, 3), data=Boston)
+
+summary(lm.zn)
+summary(lm.indus)
+summary(lm.nox)
+summary(lm.rm)
+summary(lm.age)
+summary(lm.dis)
+summary(lm.rad)
+summary(lm.tax)
+summary(lm.ptratio)
+summary(lm.black)
+summary(lm.lstat)
+summary(lm.medv)
+```
+
+There`s evidence of non-linearity for every predictor but `black` and `chas`.
