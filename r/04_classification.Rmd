@@ -1,0 +1,380 @@
+---
+title: "04_classification"
+author: "Julen Pardo"
+date: "5/2/2021"
+output: html_document
+---
+
+# Applied exercises
+
+## 10
+
+```{r}
+library(ISLR)
+library(MASS)
+library(class)
+```
+
+### 10.a
+
+```{r}
+cor(Weekly[,-9])
+summary(Weekly)
+pairs(Weekly)
+plot(Weekly$Year, Weekly$Volume)
+```
+
+`Year` and `Volume` are positively correlated (increases until 2009 and then
+goes down in 2010).
+
+### 10.b
+
+```{r}
+glm.fit = glm(Direction~. -Today -Year, data=Weekly, family=binomial)
+summary(glm.fit)
+```
+
+The only statistically significant predictor appears to be `Lag2`
+
+### 10.c
+```{r}
+glm.probs = predict(glm.fit, type="response")
+glm.pred = rep("Down", nrow(Weekly))
+glm.pred[glm.probs > .5] = "Up"
+table(glm.pred, Weekly$Direction)
+print(sprintf("Fraction of correct predictions: %f", mean(glm.pred == Weekly$Direction)))
+print(sprintf("Fraction of 'Up' entries: %f", nrow(Weekly[Weekly$Direction == "Up",]) / nrow(Weekly)))
+```
+
+The model is 56,1% of the time, which may appear a better result what than it
+actually is (considering that we're using the training test for evaluating it),
+as the entries labeled as `Up` suppose the 55,56% of the data, meaning that the
+model is better just by a factor of 0,5% than random guessing for the baseline
+accuracy.
+
+The confusion matrix shows that the recall of the model (0.56) is quite worse
+than the precision (0.92).
+
+### 10.d
+
+```{r}
+train_filter = Weekly$Year < 2009
+train_data = Weekly[train_filter,]
+test_data = Weekly[!train_filter,]
+
+glm.fit2 = glm(Direction~Lag2, data=Weekly, family=binomial, subset=train_filter)
+glm.fit2.probs = predict(glm.fit2, test_data, type="response")
+glm.fit2.pred = ifelse(glm.fit2.probs > .5, "Up", "Down")
+table(glm.fit2.pred, test_data$Direction)
+mean(glm.fit2.pred == test_data$Direction)
+```
+
+## 10.e
+
+```{r}
+lda.fit = lda(Direction~Lag2, data=Weekly, subset=train_filter)
+lda.fit.pred = predict(lda.fit, test_data)$class
+table(lda.fit.pred, test_data$Direction)
+mean(lda.fit.pred == test_data$Direction)
+```
+
+## 10.f
+
+```{r}
+qda.fit = qda(Direction~Lag2, data=Weekly, subset=train_filter)
+qda.fit.pred = predict(qda.fit, test_data)$class
+table(qda.fit.pred, test_data$Direction)
+mean(qda.fit.pred == test_data$Direction)
+```
+
+## 10.g
+
+```{r}
+set.seed(1)
+train.X = as.matrix(Weekly[train_filter,]$Lag2)
+test.X = as.matrix(Weekly[!train_filter,]$Lag2)
+train.Y = Weekly$Direction[train_filter]
+
+knn.pred = knn(train.X, test.X, train.Y, k=1)
+
+table(knn.pred, test_data$Direction)
+mean(knn.pred == test_data$Direction)
+```
+
+### 10.h
+
+```{r}
+mean(glm.fit2.pred == test_data$Direction)
+mean(lda.fit.pred == test_data$Direction)
+mean(qda.fit.pred == test_data$Direction)
+mean(knn.pred == test_data$Direction)
+
+table(glm.fit2.pred, test_data$Direction)
+table(lda.fit.pred, test_data$Direction)
+table(qda.fit.pred, test_data$Direction)
+```
+Logistic regression and LDA are the most accurate models (accuracy of 0.625,
+both yield the same confusion matrices). The accuracy of the QDA is slightly
+better than the first model that used all the predictors (0.58) and the KNN
+model has an accuracy of 0.5 which is worse than predicting everything by
+default as `Up`.
+
+### 10.i
+
+```{r}
+summary(glm(Direction~Lag2, data=Weekly, subset=train_filter, family=binomial))
+table(knn(train.X, test.X, train.Y, k=5), test_data$Direction)
+mean(knn(train.X, test.X, train.Y, k=5) == test_data$Direction)  # 0.52
+
+table(knn(train.X, test.X, train.Y, k=15), test_data$Direction)
+mean(knn(train.X, test.X, train.Y, k=15) == test_data$Direction)  # 0.58
+
+table(knn(train.X, test.X, train.Y, k=20), test_data$Direction)
+mean(knn(train.X, test.X, train.Y, k=20) == test_data$Direction)  # 0.58
+```
+
+TODO: try more different models
+
+## 11.a
+
+```{r}
+median(Auto$mpg)
+Auto$mpg01 = ifelse(Auto$mpg > median(Auto$mpg), 1, 0)
+Auto
+```
+
+## 11.b
+
+```{r}
+cor(Auto[,-9])
+pairs(Auto)
+```
+
+By having a first look into the scatter plot and correlation matrices, the
+features that seem to be the most useful to predict `mpg01` are, sorted desc by
+correlation, `mpg` (obviously), `cylinders`, `weight`, `displacement` and
+`horsepower`.
+
+```{r}
+par(mfrow=c(2,2))
+plot(Auto$mpg, Auto$mpg01)
+plot(Auto$horsepower, Auto$mpg01)
+plot(Auto$weight, Auto$mpg01)
+plot(Auto$acceleration, Auto$mpg01)
+
+par(mfrow=c(2,2))
+boxplot(cylinders ~ mpg01, data=Auto)
+boxplot(weight ~ mpg01, data=Auto)
+boxplot(displacement ~ mpg01, data=Auto)
+boxplot(horsepower ~ mpg01, data=Auto)
+```
+
+From these visualizations, we can conclude that there's indeed a relationship
+between those 4 features and `mpg01`, having for all 4 higher values for
+`mpg01=0` than for `mpg01=1`.
+
+For the boxplot displaying the cylinders, for `mpg01=1`, only the median
+(and 4 outliers) is yielded, not even whiskers, meaning that the vast majority
+of cars with `mpg01=1` will have 4 cylinders.
+
+```{r}
+barplot(table(Auto[Auto$mpg01 == 1,]$cylinders))
+sum(Auto[Auto$mpg01 == 1,]$cylinders == 4) / nrow(Auto[Auto$mpg01 == 1,]) * 100
+```
+## 11.c
+
+```{r}
+set.seed(42)
+train.ids = sample(nrow(Auto), nrow(Auto) * .7)
+Auto.train = Auto[train.ids,]
+Auto.test = Auto[-train.ids,]
+```
+
+
+## 11.d
+
+```{r}
+lda.fit = lda(mpg01~cylinders + weight + displacement + horsepower, data=Auto, subset=train.ids)
+lda.fit.pred = predict(lda.fit, Auto.test)$class
+table(lda.fit.pred, Auto.test$mpg01)
+mean(lda.fit.pred != Auto.test$mpg01)
+```
+
+Test error is 0.076 for LDA
+
+## 11.e
+
+```{r}
+qda.fit = qda(mpg01~cylinders + weight + displacement + horsepower, data=Auto, subset=train.ids)
+qda.fit.pred = predict(qda.fit, Auto.test)$class
+table(qda.fit.pred, Auto.test$mpg01)
+mean(qda.fit.pred != Auto.test$mpg01)
+```
+
+Test error is 0.085 for QDA
+
+## 11.f
+
+```{r}
+glm.fit = glm(mpg01~cylinders + weight + displacement + horsepower, data=Auto, family=binomial, subset=train.ids)
+glm.probs = predict(glm.fit, Auto.test, type="response")
+glm.pred = ifelse(glm.probs > .5, 1, 0)
+table(glm.pred, Auto.test$mpg01)
+mean(glm.pred != Auto.test$mpg01)
+```
+
+Test error is 0.076 for logistic regression
+
+## 11.g
+
+```{r}set.seed(42)
+
+Auto.train.X = as.matrix(data.frame(Auto.train$cylinders, Auto.train$weight, Auto.train$displacement, Auto.train$horsepower))
+Auto.test.X = as.matrix(data.frame(Auto.test$cylinders, Auto.test$weight, Auto.test$displacement, Auto.test$horsepower))
+Auto.train.Y = Auto.train$mpg01
+
+knn.k1 = knn(Auto.train.X, Auto.test.X, Auto.train.Y, k=1)
+table(knn.k1, Auto.test$mpg01)
+mean(knn.k1 != Auto.test$mpg01)
+
+error = c()
+
+for (k in 1:100) {
+  error[k] = mean(knn(Auto.train.X, Auto.test.X, Auto.train.Y, k=k) != Auto.test$mpg01)
+}
+
+plot(c(1:100), error)
+
+best.k = which.min(error)
+error[best.k]
+```
+
+The k ([1, 100]) that minimizes the error is `k=82`, with a value of 0.068
+
+## 12.a
+
+```{r}
+Power <- function() {
+  print(2^3)
+}
+Power()
+```
+
+## 12.b
+
+```{r}
+Power2 <- function(x, a) {
+  print(x^a)
+}
+
+Power2(3, 8)
+```
+## 12.c
+
+```{r}
+Power2(10, 3)
+Power2(8, 17)
+Power2(131, 3)
+```
+
+## 12.d
+
+```{r}
+Power3 <- function(x, a) {
+  return(x^a)
+}
+```
+
+## 12.e
+
+```{r}
+plot(c(1:10), Power3(c(1:10), 2), xlab="Log(x)", ylab="Log(x^2)", log='xy')
+```
+
+## 12.f
+
+```{r}
+PlotPower <- function(x, a) {
+  plot(x, Power3(x, a), xlab="x", ylab="x^2")
+}
+PlotPower(1:10, 3)
+```
+
+## 13
+
+```{r}
+median(Boston$crim)
+Boston$crim01 = ifelse(Boston$crim > median(Boston$crim), 1, 0)
+cor(Boston)
+pairs(Boston)
+Boston.train.ids = sample(nrow(Boston), nrow(Boston) * .7)
+Boston.train = Boston[train.ids,]
+Boston.test = Boston[-train.ids,]
+cor(Boston)
+print(sprintf("Percentage of values crim01=1: %f", sum(Boston$crim01 != 1) / nrow(Boston)))
+```
+
+The correlation matrix suggests that there may be some correlation between
+`nox`, `age`, `dis`, `rad` and `tax`, `crim01`. These will be the predictors
+used at first to fit the models.
+
+The distribution of `crim01` values in the dataset is 50-50, meaning that the
+baseline accuracy is 0.5.
+
+```{r}
+glm.fit = glm(crim01 ~ nox + age + dis + rad + tax, data=Boston, family=binomial, subset=train.ids)
+glm.probs = predict(glm.fit, Boston.test, type="response")
+glm.pred = ifelse(glm.probs > .5, 1, 0)
+table(glm.pred, Boston.test$crim01)
+mean(glm.pred != Boston.test$crim01)
+```
+
+Test error for logistic regression is 0.125
+
+```{r}
+lda.fit = lda(crim01 ~ nox + age + dis + rad + tax, data=Boston, subset=train.ids)
+lda.fit.pred = predict(lda.fit, Boston.test)$class
+table(lda.fit.pred, Boston.test$crim01)
+mean(lda.fit.pred != Boston.test$crim01)
+```
+
+Test error for LDA is 0.133. Compared to logistic regression, the LDA model has
+more sensitivity (it captures more true positives), and a lower specificity (it
+captures less true negatives).
+
+```{r}
+qda.fit = qda(crim01 ~ nox + age + dis + rad + tax, data=Boston, subset=train.ids)
+qda.fit.pred = predict(qda.fit, Boston.test)$class
+table(qda.fit.pred, Boston.test$crim01)
+mean(qda.fit.pred != Boston.test$crim01)
+```
+
+Test error for QDA is 0.099, quite better than the other models. It has a better
+specificity than the previous both models, and only a slightly worse sensitivity
+than the logistic regression model.
+
+```{r}
+set.seed(42)
+Boston.train.X = as.matrix(data.frame(Boston.train$nox, Boston.train$age, Boston.train$dis, Boston.train$rad, Boston.train$tax))
+Boston.test.X = as.matrix(data.frame(Boston.test$nox, Boston.test$age, Boston.test$dis, Boston.test$rad, Boston.test$tax))
+Boston.train.Y = Boston.train$crim01
+error = c()
+
+for (k in 1:150) {
+  error[k] = mean(knn(Boston.train.X, Boston.test.X, Boston.train.Y, k=k) != Boston.test$crim01)
+}
+
+plot(c(1:150), error)
+
+best.k = which.min(error)
+error[best.k]
+best.k
+table(knn(Boston.train.X, Boston.test.X, Boston.train.Y, k=best.k), Boston.test$crim01)
+```
+
+KNN with k=6 yields a test error 0.086, outperforming the rest of the models.
+
+From the error rates of the different models, we may conclude that the function
+is non linear, as the biggest difference in test errors is between the linear
+and nonlinear models; being probably quite complex, as KNN with a relative low
+number of neighbors substantially improves the QDA fit.
