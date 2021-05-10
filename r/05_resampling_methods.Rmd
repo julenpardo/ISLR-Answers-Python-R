@@ -1,0 +1,302 @@
+---
+title: "05_resampling_methods"
+author: "Julen Pardo"
+date: "5/10/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## 5.a
+
+```{r}
+set.seed(42)
+library(ISLR)
+library(boot)
+glm.fit = glm(default~income+balance, data=Default, family=binomial)
+```
+
+## 5.b
+
+```{r}
+train = sample(nrow(Default), nrow(Default) * .5)
+Default.train = Default[train,]
+Default.test = Default[-train,]
+
+glm.fit = glm(default~income+balance, data=Default, family=binomial, subset=train)
+glm.probs = predict(glm.fit, Default.test, type="response")
+glm.pred = ifelse(glm.probs > .5, "Yes", "No")
+table(glm.pred, Default.test$default)
+mean(glm.pred != Default.test$default)
+```
+
+## 5.c
+
+```{r}
+set.seed(1)
+train = sample(nrow(Default), nrow(Default) * .5)
+Default.train = Default[train,]
+Default.test = Default[-train,]
+
+glm.fit = glm(default~income+balance, data=Default, family=binomial, subset=train)
+glm.probs = predict(glm.fit, Default.test, type="response")
+glm.pred = ifelse(glm.probs > .5, "Yes", "No")
+mean(glm.pred != Default.test$default)
+
+set.seed(3)
+train = sample(nrow(Default), nrow(Default) * .5)
+Default.train = Default[train,]
+Default.test = Default[-train,]
+
+glm.fit = glm(default~income+balance, data=Default, family=binomial, subset=train)
+glm.probs = predict(glm.fit, Default.test, type="response")
+glm.pred = ifelse(glm.probs > .5, "Yes", "No")
+mean(glm.pred != Default.test$default)
+
+set.seed(3)
+train = sample(nrow(Default), nrow(Default) * .5)
+Default.train = Default[train,]
+Default.test = Default[-train,]
+
+glm.fit = glm(default~income+balance, data=Default, family=binomial, subset=train)
+glm.probs = predict(glm.fit, Default.test, type="response")
+glm.pred = ifelse(glm.probs > .5, "Yes", "No")
+mean(glm.pred != Default.test$default)
+```
+
+Test errors are 0.025, 0.026 and 0.026. There's almost no variance
+
+## 5.d
+
+```{r}
+set.seed(42)
+train = sample(nrow(Default), nrow(Default) * .5)
+Default.train = Default[train,]
+Default.test = Default[-train,]
+
+glm.fit = glm(default~income+balance+student, data=Default, family=binomial, subset=train)
+glm.probs = predict(glm.fit, Default.test, type="response")
+glm.pred = ifelse(glm.probs > .5, "Yes", "No")
+mean(glm.pred != Default.test$default)
+```
+
+Test error is 0.026, it doesn't seem that fitting the model with it reduces the
+test error
+
+## 6.a
+
+```{r}
+set.seed(42)
+train = sample(nrow(Default), nrow(Default) * .5)
+Default.train = Default[train,]
+Default.test = Default[-train,]
+
+glm.fit = glm(default~income+balance, data=Default, family=binomial, subset=train)
+glm.probs = predict(glm.fit, Default.test, type="response")
+glm.pred = ifelse(glm.probs > .5, "Yes", "No")
+summary(glm.fit)
+```
+
+The standard errors for `income` and `balance` are 6.975e-06 and 3.11e-04,
+respectively
+
+## 6.b-c
+
+```{r}
+boot.fn = function(data, index) {
+  return(coef(glm(default~income+balance, data=data, family=binomial, subset=index)))
+}
+boot(Default, boot.fn, 1000)
+```
+
+The standard errors for `income` and `balance` are 4.644-e06 and 2.313e-04,
+respectively
+
+## 6.d
+
+The standard error for the coefficients of both predictors for both methods are
+pretty similar, being slightly lower bootstraping
+
+## 7.a-c
+
+```{r}
+glm.fit = glm(Direction~Lag1+Lag2, data=Weekly, family=binomial)
+glm.fit2 = glm(Direction~Lag1+Lag2, data=Weekly[-1,], family=binomial)
+glm.fit2.probs = predict(glm.fit2, Weekly[1,], type="response")
+glm.fit2.pred = ifelse(glm.fit2.probs > .5, "Up", "Down")
+glm.fit2.pred == Weekly[1,]$Direction
+```
+The observation was not correctly classified
+
+## 7.d
+
+```{r}
+correct.predictions = c()
+for (i in 1:nrow(Weekly)) {
+  glm.fit = glm(Direction~Lag1+Lag2, data=Weekly[-i,], family=binomial)
+  glm.fit.probs = predict(glm.fit, Weekly[i,], type="response")
+  glm.fit.pred = ifelse(glm.fit.probs > .5, "Up", "Down")
+  correct.predictions[i] = glm.fit.pred == Weekly[i,]$Direction
+}
+1 - mean(correct.predictions)
+nrow(Weekly[Weekly$Direction == "Up",]) / nrow(Weekly)
+```
+
+Test error is 0.45, meaning that the accuracy is 0.55. This is exactly the same
+fraction of the `Up` samples in the dataset, meaning that the fit model is no
+better than just predicting everything as `Up`.
+
+## 8.a
+
+```{r}
+set.seed(1)
+y = rnorm(100)
+x = rnorm(100)
+y = x-2 * x^2 + rnorm(100)
+```
+
+n = 100
+p = 2
+
+The equation is already given
+
+## 8.b
+
+```{r}
+plot(x, y)
+```
+
+The data is non linear; a convex upward parabola
+
+
+## 8.c
+
+```{r}
+set.seed(42)
+
+data = data.frame(x, y)
+
+cv.glm(data, glm(y~x, data=data))$delta[1]
+cv.glm(data, glm(y~poly(x, 2), data=data))$delta[1]
+cv.glm(data, glm(y~poly(x, 3), data=data))$delta[1]
+cv.glm(data, glm(y~poly(x, 4), data=data))$delta[1]
+```
+
+# 8.d
+
+```{r}
+set.seed(84)
+
+data = data.frame(x, y)
+
+cv.glm(data, glm(y~x, data=data))$delta[1]
+cv.glm(data, glm(y~poly(x, 2), data=data))$delta[1]
+cv.glm(data, glm(y~poly(x, 3), data=data))$delta[1]
+cv.glm(data, glm(y~poly(x, 4), data=data))$delta[1]
+```
+
+Results are the same as LOOCV will yield the same results for the same fits and
+data, as the train and test set combinations will always be the same
+
+## 8.e
+
+The model with smallest error is the one with the cubic term. It's quite
+surprising as the scatter suggested a parabola. However the difference with the
+fit with the quadratic term is quite low
+
+
+## 8.f
+
+```{r}
+summary(glm(y~x, data=data))
+summary(glm(y~poly(x, 2), data=data))
+summary(glm(y~poly(x, 3), data=data))
+summary(glm(y~poly(x, 4), data=data))
+```
+
+The associated p values to the predictors show that the quadratic term is highly
+significant statistically, also the linear term (when fit along with the
+quadratic term)
+
+## 9.a
+
+```{r}
+library(MASS)
+
+mu.hat = mean(Boston$medv)
+mu.hat
+```
+
+## 9.b
+
+```{r}
+se.hat = sd(Boston$medv) / sqrt(nrow(Boston))
+se.hat
+```
+
+## 9.c
+
+```{r}
+set.seed(42)
+boot.fn = function(data, index) {
+  return(mean(data[index]))
+}
+boot(Boston$medv, boot.fn, 1000)
+```
+
+It's 0.401, quite close to the value from the previous section (0.409)
+
+## 9.d
+
+```{r}
+sd.boot = 0.4008319
+c(mu.hat - 2 * sd.boot, mu.hat + 2 * sd.boot)
+t.test(Boston$medv)
+```
+
+The 95% confidence interval using the bootstrap estimate is [21.731, 23.334],
+really close to the one obtained with `t.test`, [21.729, 23.336]
+
+## 9.e
+
+```{r}
+mu.med.hat = median(Boston$medv)
+mu.med.hat
+```
+
+21.2
+
+## 9.f
+
+```{r}
+set.seed(42)
+boot.fn = function(data, index) {
+  return(median(data[index]))
+}
+boot(Boston$medv, boot.fn, 1000)
+```
+
+The standard error of the median is 0.377, which is fairly low taking into
+account the median value, 21.2
+
+## 9.g 
+
+```{r}
+medv.tenth.perc.hat = quantile(Boston$medv, 0.1)
+unname(medv.tenth.perc.hat)
+```
+
+## 9.h
+
+```{r}
+set.seed(42)
+boot.fn = function(data, index) {
+  return(quantile(data[index], 0.1))
+}
+boot(Boston$medv, boot.fn, 1000)
+```
+
+The bootstrap standard error estimate is 0.495, also low in relative terms to
+the estimate, which is 12.75
